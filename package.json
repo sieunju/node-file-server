@@ -2,7 +2,7 @@
     "name":"node-file-server",
     "versions" : "1.0.0",
     "description": "이미지, 동영상 등등 리소스 서버입니다.",
-    "main": "server.js",
+    "main": "file-server.js",
     "dependencies": {
         "app-module-path": "^2.2.0",
         "app-root-path": "^3.0.0",
@@ -13,8 +13,9 @@
         "express": "^4.17.1",
         "express-session": "^1.17.1",
         "multer": "^1.4.2",
-        "mysql": "^2.18.1",
+        "mariadb": "2.5.4",
         "session-file-store": "^1.5.0",
+        "stringbuffer": "^1.0.0",
         "winston-daily-rotate-file": "^4.5.0"
       },
       "scripts": {
