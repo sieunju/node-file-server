@@ -1,4 +1,4 @@
-const db = require('mariadb')
+const db = require('mysql')
 require('dotenv').config()
 const config = {
     host: process.env.DB_HOST,
@@ -10,7 +10,6 @@ const config = {
     dateStrings: 'date'
 }
 const pool = db.createPool(config)
-
 module.exports = (function () {
     return {
         init: function () {
@@ -46,13 +45,13 @@ module.exports = (function () {
          * 파라미터가 존재하는 타입.
          * @param {String} query    DB Query
          * @param {String []} params  Parameter ex.) '?'
-         * @param {bool,rows} callBack  Query Callbakc Listener
+         * @param {bool,rows} callback  Query Callbakc Listener
          */
         query: function (query, params, callback) {
             if (params == null) {
                 pool.getConnection(function (err, con) {
                     if (err) {
-                        callBack(err, "DataBase Connection Error")
+                        callback(err, "DataBase Connection Error")
                         con.release()
                     } else {
                         con.query(query, function (err, rows) {
@@ -65,11 +64,11 @@ module.exports = (function () {
             } else {
                 pool.getConnection(function (err, con) {
                     if (err) {
-                        callBack(err, "DataBase Connection Error")
+                        callback(err, "DataBase Connection Error")
                         con.release();
                     } else {
                         con.query(query, params, function (err, rows) {
-                            callBack(err, rows);
+                            callback(err, rows);
                             // Pool에 Connection을 반납 
                             con.release();
                         })

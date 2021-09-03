@@ -2,15 +2,18 @@ const express = require('express');
 const session = require('express-session');
 const fileStore = require('session-file-store')(session)
 const serveStatic = require('serve-static')
+const utils = require('./utils/commandUtil')
+const cors = require('cors')
+const env = require('dotenv')
+const db = require('./db/db_config')
+db.init()
+
+env.config()
 const fs = require('fs')
 const path = require('path')
-const utils = require('./utils/commandUtil')
 const app = express()
-const api = require('./routes/index')
-require('dotenv').config()
-require('./db/db_config').init()
 
-app.use(require('cors'));
+const api = require('./routes/index')
 app.use('/resource', serveStatic(path.join(__dirname, 'resource')))
 app.use(express.urlencoded({
     limit: "50mb",
@@ -18,8 +21,9 @@ app.use(express.urlencoded({
 }))
 app.use(express.json({
     limit: "50mb"
-})); // API Call 할때.                            
-app.use('/', api);
+})) // API Call 할때.                            
+app.use('/', api)
+
 const concat = require('concat-stream');
 app.use(function (req, res, next) {
     req.pipe(concat(function (data) {
@@ -33,6 +37,8 @@ app.use(session({
     saveUninitialized: true,
     store: new fileStore()
 }));
+
+app.use(cors());
 
 // Handle Error Setting
 app.use(function (err, req, res, next) {
