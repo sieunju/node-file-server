@@ -13,7 +13,6 @@ const utils = require('../utils/commandUtil')
  * @param {File Listener} callback 
  */
 const filter = (req, file, callback) => {
-    console.log('Filter File 타입' + file.mimetype)
     const type = file.mimetype
     if (type.startsWith('image') ||
         type.startsWith('video') ||
@@ -33,7 +32,6 @@ const filter = (req, file, callback) => {
  */
 const dateDir = (path, callback) => {
     utils.checkDir(fs, path, function (isSuccess, msg) {
-        console.log("SUCC " + isSuccess + " DIR Path " + msg)
         if (isSuccess) {
             callback(null, path)
         }
@@ -41,9 +39,8 @@ const dateDir = (path, callback) => {
 }
 
 const storage = multer.diskStorage({
-    // 폴더 경로 설정
     destination: function (req, file, callback) {
-        console.log('File 타입' + file.mimetype)
+        // 폴더 경로 설정
         const currDate = utils.getCurrentDate()
         const type = file.mimetype
         if (type.startsWith('image')) {
@@ -57,11 +54,10 @@ const storage = multer.diskStorage({
             dateDir(process.env.UPLOAD_ETC + '/' + currDate, callback)
         }
     },
-    // 파일명 설정
     filename: function (req, file, callback) {
+        // 파일명 설정
         let extension = path.extname(file.originalname);
         const ranDomName = Math.random().toString(36).substr(2, 11);
-        console.log("FileName " + file.originalname)
         // ${현재 시간 TimeMilles}${랜덤 이름}.${확장자 포멧}
         callback(null, Date.now() + ranDomName + extension);
     }
@@ -72,6 +68,12 @@ const upload = multer({
     fileFilter: filter
 })
 
+// Blob 으로 저장하고 싶다면..
+// const upload = multer({
+//     storage : multer.memoryStorage(),
+//     fileFilter: filter
+// })
+
 // [s] API Start
 router.post('/api/uploads', upload.array('files'), (req, res) => {
     try {
@@ -79,18 +81,20 @@ router.post('/api/uploads', upload.array('files'), (req, res) => {
         const fileSize = req.files.length
         let callBackCnt = 0
         req.files.forEach(e => {
-            model.addFile(e.path, function onMessage(err, rows) {
+            model.addFile(e, function onMessage(err, rows) {
                 callBackCnt++
                 // Sql Error
                 if (err) {
                     console.log("DB Error " + err)
                 } else {
-                    // Sql Success
                     console.log("DB Success " + rows)
                     filePathList.push({
                         id: rows.insertId,
                         path: e.path
                     })
+
+                    // Add Batch Binary File
+                    model.batchAddBinary(rows.insertId, e.path)
                 }
 
                 // 모든 CallBack 완료 했다면.
@@ -124,31 +128,34 @@ router.delete('/api/uploads', (req, res) => {
         // DB Query 실행 기준은 File Id 리스트 기준.
         const callBackLength = deleteIds.length
         let callBackCnt = 0
-        for (let i = 0; i < callBackLength; i++) {
-            model.deleteFile(deleteIds[i], function onMessage(err, rows,imgPath) {
-                callBackCnt++
-                // Sql Error 
-                if (err) {
-                    console.log('Sql Error')
-                    console.log(err)
-                }
+        try {
+            for (let i = 0; i < callBackLength; i++) {
+                model.batchDeleteAddFile(deleteIds[i], function onMessage(err, rows, imgPath) {
+                    callBackCnt++
+                    // Sql Error 
+                    if (err) {
+                        console.log(err)
+                    }
+                    // 실제로 파일 삭제 하는 로직은 정기적으로 배치돌리는걸로 처리
+                    // try {
+                    //     console.log('Delete Path ' + imgPath)
+                    //     fs.unlinkSync(imgPath)
+                    // } catch (err) {
+                    //     console.log('File Delete Error')
+                    //     console.log(err)
+                    // }
 
-                try {
-                    console.log('Delete Path ' + imgPath)
-                    fs.unlinkSync(imgPath)
-                } catch (err) {
-                    console.log('File Delete Error')
-                    console.log(err)
-                }
-
-                // 모든 CallBack 완료 했다면.
-                if (callBackCnt == callBackLength) {
-                    res.status(200).send({
-                        status: true,
-                        msg: '파일이 정상적으로 삭제 되었습니다.'
-                    }).end()
-                }
-            })
+                    // 모든 CallBack 완료 했다면.
+                    if (callBackCnt == callBackLength) {
+                        res.status(200).send({
+                            status: true,
+                            msg: '파일이 정상적으로 삭제 되었습니다.'
+                        }).end()
+                    }
+                })
+            }
+        } catch (err) {
+            callBackCnt++
         }
     } catch (err) {
         console.log('Delete File Error ' + err)
@@ -156,6 +163,59 @@ router.delete('/api/uploads', (req, res) => {
             status: false,
             errMsg: err
         }).end()
+    }
+})
+
+router.delete('/api/batchFiles', (req, res) => {
+    try {
+        console.log("adfasdfasdf")
+        utils.checkAuth(req.header('authKey'), function (isAuth) {
+            if (isAuth) {
+                model.batchDeleteFiles(function onMessage(err, rows) {
+                    if (err) {
+                        console.log(err)
+                        console.log("111111111111111111111111111111111")
+                    } else {
+                        console.log("ERROROROROR")
+                        rows.forEach(e => {
+                            try {
+                                console.log("Delete Path " + e.PATH)
+                                // model.deleteFile(e.ID)
+                                // fs.unlinkSync(e.PATH)
+                            } catch (err) {
+                                console.log(err)
+                            }
+                        })
+    
+                        res.status(200).end()
+                    }
+                })
+            } else {
+                console.log("??111111111111111111111")
+                res.status(401).send({
+                    status: false,
+                    errMsg: 'Authentication Failed..'
+                }).end()
+            }
+        })
+    } catch (err) {
+        console.log("EEE ?")
+        res.status(401).send({
+            status: false,
+            errMsg: 'Authentication Failed..'
+        }).end()
+    }
+})
+
+router.put('/api/batchBinary', (req, res) => {
+    try {
+        model.batchFetchBinary(function onMessage(err, rows) {
+            rows.forEach(e => {
+
+            })
+        })
+    } catch (err) {
+        console.log(err)
     }
 })
 // [e] API End

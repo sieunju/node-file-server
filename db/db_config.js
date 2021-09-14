@@ -19,21 +19,21 @@ module.exports = (function () {
                     throw err;
                 }
                 console.log("MariaDB Database Connected!");
-                let sqlQuery;
 
-                sqlQuery = "CREATE TABLE `FILE_TB` ( `ID` INT NOT NULL AUTO_INCREMENT COMMENT 'Unique Id' , " +
-                    "`PATH` VARCHAR(80) NOT NULL COMMENT '파일 경로' ," +
-                    "`OBJ` LONGBLOB NULL COMMENT '파일 바이너리' ," +
-                    "`REG_DATE` DATE NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '시간'" +
-                    ", PRIMARY KEY (`ID`));"
+                /**
+                 * Table Spec
+                 *  FILE_TB
+                    ID (int) NOT NULL Auto Increment
+                    PATH (varchar 80) NOT NULL 파일 경로
+                    OBJ (longblob) NULL 파일 바이너리
+                    IS_LOCK (tintyint or boolean) 0 관리자가 직접 삭제 유무에 대한 Flag
+                    REG_DATE (date) current timestamp 파일 저장된 시간
 
-                con.query(sqlQuery, function (err, result) {
-                    if (err) {
-                        console.log("Create File Table Error " + err);
-                    } else {
-                        console.log("FILE_TB Table Created");
-                    }
-                })
+                    DEL_FILE_TB 정기적으로 삭제할 파일들에 대한 테이블 (FK FILE_TB > ID)
+                    FILE (int) 삭제할 파일 ID값
+                    IS_LOCK (tintyint or boolean) 0 관리자가 직접 삭제 유무에 대한 Flag
+                    DATE (date) current timestamp 삭제를 요청한 날짜
+                 */
 
                 con.release()
                 setInterval(keepAlive, 60 * 60 * 1000);

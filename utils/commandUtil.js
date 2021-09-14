@@ -1,3 +1,6 @@
+const e = require('express');
+const authModel = require('../models/authModel')
+
 /**
  * 디렉토리 체크 로직
  * @param {string} path 
@@ -64,4 +67,21 @@ exports.getCurrentDate = function () {
     let day = date.getDate()
     day = day < 10 ? '0' + day.toString() : day.toString()
     return year + '' + month + '' + day
+}
+
+exports.checkAuth = function (findAuthKey,callback) {
+    authModel.fetchAutkKey(function onMessage(err,rows) {
+        if(err) {
+            callback(false)
+            return
+        }
+        console.log(findAuthKey)
+        rows.forEach(e => {
+            if(e.AUTH_KEY == findAuthKey) {
+                callback(true)
+                return
+            }
+        });
+        callback(false)
+    })
 }
